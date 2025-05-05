@@ -53,7 +53,8 @@ d3.json("world.geo.json").then((data) => {
     .enter()
     .append("path")
     .attr("d", path)
-    .attr("data-name", d => d.properties.name)
+    .attr("data-name", (d) => d.properties.name)
+    .attr("data-iso", (d) => d.properties.iso_a2)
     .attr("fill", "#292929")
     .attr("stroke", "#9b9b9b")
     .attr("stroke-width", 0.1)
@@ -77,51 +78,179 @@ d3.json("world.geo.json").then((data) => {
       countrySelector.querySelector("span").textContent = d.properties.name;
 
       zoomToCountry(d);
-      openModal(d.properties.name);
+      openModal(d.properties.name, d.properties.iso_a2);
     });
 });
 
-async function fetchArticleMetadata(url) {
-  try {
-    const response = await fetch(url);
-    const html = await response.text();
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(html, "text/html");
-
-    // Get Open Graph image
-    const ogImage =
-      doc.querySelector('meta[property="og:image"]')?.content ||
-      doc.querySelector('meta[name="twitter:image"]')?.content ||
-      doc.querySelector('meta[property="og:image:secure_url"]')?.content;
-
-    // Get title
-    const title =
-      doc.querySelector('meta[property="og:title"]')?.content ||
-      doc.querySelector("title")?.textContent ||
-      doc.querySelector("h1")?.textContent;
-
-    // Get publication date
-    const date =
-      doc.querySelector('meta[property="article:published_time"]')?.content ||
-      doc.querySelector('meta[name="publication-date"]')?.content ||
-      doc.querySelector("time")?.getAttribute("datetime");
-
-    return {
-      title: title?.trim() || "Article Title Not Found",
-      image: ogImage || null,
-      date: date ? new Date(date).toLocaleDateString() : "Date Not Available",
-    };
-  } catch (error) {
-    console.error("Error fetching article metadata:", error);
-    return {
-      title: "Article Title Not Found",
-      image: null,
-      date: "Date Not Available",
-    };
-  }
+// Function to normalize country names for search
+function normalizeCountryName(countryName) {
+  const nameMap = {
+    "United States of America": "United States",
+    "United Kingdom of Great Britain and Northern Ireland": "United Kingdom",
+    "Russian Federation": "Russia",
+    "Republic of Korea": "South Korea",
+    "Democratic People's Republic of Korea": "North Korea",
+    "Islamic Republic of Iran": "Iran",
+    "Syrian Arab Republic": "Syria",
+    "Lao People's Democratic Republic": "Laos",
+    "Republic of the Union of Myanmar": "Myanmar",
+    "Kingdom of Eswatini": "Eswatini",
+    "United Republic of Tanzania": "Tanzania",
+    "Republic of the Congo": "Congo",
+    "Democratic Republic of the Congo": "DR Congo",
+    "Republic of Moldova": "Moldova",
+    "Republic of the Sudan": "Sudan",
+    "Republic of the Gambia": "Gambia",
+    "Republic of the Philippines": "Philippines",
+    "Republic of the Marshall Islands": "Marshall Islands",
+    "Republic of the Fiji Islands": "Fiji",
+    "Republic of the Seychelles": "Seychelles",
+    "Republic of the Maldives": "Maldives",
+    "Republic of the Comoros": "Comoros",
+    "Republic of the Mauritius": "Mauritius",
+    "Republic of the Cape Verde": "Cape Verde",
+    "Republic of the São Tomé and Príncipe": "São Tomé and Príncipe",
+    "Republic of the Equatorial Guinea": "Equatorial Guinea",
+    "Republic of the Guinea-Bissau": "Guinea-Bissau",
+    "Republic of the Sierra Leone": "Sierra Leone",
+    "Republic of the Liberia": "Liberia",
+    "Republic of the Côte d'Ivoire": "Ivory Coast",
+    "Republic of the Burkina Faso": "Burkina Faso",
+    "Republic of the Mali": "Mali",
+    "Republic of the Mauritania": "Mauritania",
+    "Republic of the Senegal": "Senegal",
+    "Republic of the Guinea": "Guinea",
+    "Republic of the Cameroon": "Cameroon",
+    "Republic of the Gabon": "Gabon",
+    "Republic of the Central African Republic": "Central African Republic",
+    "Republic of the Chad": "Chad",
+    "Republic of the Libya": "Libya",
+    "Republic of the Tunisia": "Tunisia",
+    "Republic of the Algeria": "Algeria",
+    "Republic of the Morocco": "Morocco",
+    "Republic of the Western Sahara": "Western Sahara",
+    "Republic of the Egypt": "Egypt",
+    "Republic of the Eritrea": "Eritrea",
+    "Republic of the Djibouti": "Djibouti",
+    "Republic of the Somalia": "Somalia",
+    "Republic of the Ethiopia": "Ethiopia",
+    "Republic of the Kenya": "Kenya",
+    "Republic of the Uganda": "Uganda",
+    "Republic of the Rwanda": "Rwanda",
+    "Republic of the Burundi": "Burundi",
+    "Republic of the Angola": "Angola",
+    "Republic of the Zambia": "Zambia",
+    "Republic of the Malawi": "Malawi",
+    "Republic of the Mozambique": "Mozambique",
+    "Republic of the Zimbabwe": "Zimbabwe",
+    "Republic of the Botswana": "Botswana",
+    "Republic of the Namibia": "Namibia",
+    "Republic of the South Africa": "South Africa",
+    "Republic of the Lesotho": "Lesotho",
+    "Republic of the Eswatini": "Eswatini",
+  };
+  return nameMap[countryName] || countryName;
 }
 
-async function openModal(countryName) {
+// List of trusted news domains
+const TRUSTED_NEWS_DOMAINS = [
+  "reuters.com",
+  "apnews.com",
+  "bloomberg.com",
+  "wsj.com",
+  "nytimes.com",
+  "washingtonpost.com",
+  "theguardian.com",
+  "bbc.com",
+  "bbc.co.uk",
+  "aljazeera.com",
+  "ft.com",
+  "economist.com",
+  "time.com",
+  "npr.org",
+  "politico.com",
+  "foreignpolicy.com",
+  "foreignaffairs.com",
+  "theatlantic.com",
+  "newyorker.com",
+  "newsweek.com",
+  "usatoday.com",
+  "latimes.com",
+  "chicagotribune.com",
+  "bostonglobe.com",
+  "politico.eu",
+  "euobserver.com",
+  "europeanvoice.com",
+  "handelsblatt.com",
+  "lemonde.fr",
+  "lefigaro.fr",
+  "elpais.com",
+  "corriere.it",
+  "repubblica.it",
+  "faz.net",
+  "spiegel.de",
+  "zeit.de",
+  "nrc.nl",
+  "volkskrant.nl",
+  "aftenposten.no",
+  "svd.se",
+  "dn.se",
+  "hs.fi",
+  "politiken.dk",
+  "berlingske.dk",
+  "japantimes.co.jp",
+  "asahi.com",
+  "mainichi.jp",
+  "straitstimes.com",
+  "scmp.com",
+  "theaustralian.com.au",
+  "smh.com.au",
+  "nzherald.co.nz",
+  "stuff.co.nz",
+  "globeandmail.com",
+  "nationalpost.com",
+  "haaretz.com",
+  "timesofindia.indiatimes.com",
+  "thehindu.com",
+  "dawn.com",
+  "thedailystar.net",
+  "bangkokpost.com",
+  "nationmultimedia.com",
+  "philstar.com",
+  "manilatimes.net",
+  "vietnamnews.vn",
+  "tuoitrenews.vn",
+  "koreatimes.co.kr",
+  "koreaherald.com",
+  "japantoday.com",
+  "mainichi.jp",
+  "asahi.com",
+  "chinadaily.com.cn",
+  "globaltimes.cn",
+  "straitstimes.com",
+  "channelnewsasia.com",
+  "thejakartapost.com",
+  "thestar.com.my",
+  "bangkokpost.com",
+  "nationmultimedia.com",
+  "philstar.com",
+  "manilatimes.net",
+  "vietnamnews.vn",
+  "tuoitrenews.vn",
+  "koreatimes.co.kr",
+  "koreaherald.com",
+  "japantoday.com",
+  "mainichi.jp",
+  "asahi.com",
+  "chinadaily.com.cn",
+  "globaltimes.cn",
+  "straitstimes.com",
+  "channelnewsasia.com",
+  "thejakartapost.com",
+  "thestar.com.my",
+].join(",");
+
+async function openModal(countryName, countryCode) {
   document.getElementById("modal").classList.add("open");
   document.getElementById("country-name").innerText = countryName;
   document.getElementById(
@@ -165,18 +294,43 @@ async function openModal(countryName) {
     const newsSummary = summaryData.choices[0].message.content;
 
     // Then, fetch real news articles from NewsAPI
+    const normalizedCountryName = normalizeCountryName(countryName);
     const newsResponse = await fetch(
       `https://newsapi.org/v2/everything?q=${encodeURIComponent(
-        countryName
-      )}&language=en&sortBy=publishedAt&pageSize=3&apiKey=${NEWS_API_KEY}`
+        `+${normalizedCountryName} AND (politics OR government OR president OR elections OR impeachment OR "approval rating")`
+      )}&searchIn=title&language=en&sortBy=publishedAt&pageSize=6&domains=${TRUSTED_NEWS_DOMAINS}&apiKey=${NEWS_API_KEY}`
     );
 
     if (!newsResponse.ok) {
-      throw new Error("Failed to fetch news articles");
+      console.error("News API Error:", await newsResponse.text()); // Debug log
+      throw new Error(
+        `Failed to fetch news articles: ${newsResponse.statusText}`
+      );
     }
 
     const newsData = await newsResponse.json();
+    console.log("News API Response:", newsData); // Debug log
+
+    if (!newsData.articles || newsData.articles.length === 0) {
+      console.log("No articles found for country:", countryName); // Debug log
+      document.getElementById("news-content").innerHTML = `
+        <div class="news-summary">
+          <p>${newsSummary}</p>
+          <p class="disclaimer">Note: The summary above is AI-generated based on recent events.</p>
+        </div>
+        <div class="news-articles">
+          <h3>Recent News Articles</h3>
+          <p>No recent political news articles found from major news sources for ${countryName}. This could be due to limited English-language coverage of political developments in ${countryName}.</p>
+        </div>
+      `;
+      return;
+    }
+
     const articles = newsData.articles;
+    console.log(
+      "Article titles:",
+      articles.map((a) => a.title)
+    ); // Debug log to check titles
 
     // Combine AI summary with real news articles
     document.getElementById("news-content").innerHTML = `
@@ -208,7 +362,6 @@ async function openModal(countryName) {
               <p class="article-source">${article.source.name} • ${new Date(
               article.publishedAt
             ).toLocaleDateString()}</p>
-              <p class="article-description">${article.description}</p>
             </div>
           </div>
         `
