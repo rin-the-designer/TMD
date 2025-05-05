@@ -53,6 +53,7 @@ d3.json("world.geo.json").then((data) => {
     .enter()
     .append("path")
     .attr("d", path)
+    .attr("data-name", d => d.properties.name)
     .attr("fill", "#292929")
     .attr("stroke", "#9b9b9b")
     .attr("stroke-width", 0.1)

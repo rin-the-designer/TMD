@@ -277,3 +277,27 @@ svg#map {
     height: 180px;
   }
 }
+
+.header-item input {
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #fff;
+  color: #fff;
+  padding: 2px 5px;
+  outline: none;
+  margin-left: 5px;
+}
+
+.header-item input::placeholder {
+  color: rgba(255, 255, 255, 0.7);
+}
+
+.search-dropdown {
+  margin-top: 5px;
+  border-radius: 4px;
+  box-shadow: 0 2px 5px rgba(0,0,0,0.2);
+}
+
+.dropdown-item:hover {
+  background-color: #333;
+}

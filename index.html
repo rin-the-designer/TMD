@@ -31,6 +31,120 @@
         .then((response) => response.text())
         .then((data) => {
           document.getElementById("header-placeholder").innerHTML = data;
+          
+          document.querySelector('.header-item:first-child').addEventListener('click', function(e) {
+            e.stopPropagation();
+            
+            const searchItem = this;
+            const searchSpan = searchItem.querySelector('span');
+            
+            // Create input element if it doesn't exist
+            if (!searchItem.querySelector('input')) {
+              const input = document.createElement('input');
+              input.type = 'text';
+              input.placeholder = 'Search...';
+              input.style.width = '0';
+              input.style.opacity = '0';
+              input.style.transition = 'all 0.3s ease';
+              searchItem.appendChild(input);
+
+              // Create dropdown container
+              const dropdown = document.createElement('div');
+              dropdown.className = 'search-dropdown';
+              dropdown.style.display = 'none';
+              dropdown.style.position = 'absolute';
+              dropdown.style.top = '100%';
+              dropdown.style.left = '0';
+              dropdown.style.backgroundColor = '#1a1a1a';
+              dropdown.style.border = '1px solid #333';
+              dropdown.style.maxHeight = '200px';
+              dropdown.style.overflowY = 'auto';
+              dropdown.style.zIndex = '1000';
+              dropdown.style.minWidth = '200px';
+              searchItem.style.position = 'relative';
+              searchItem.appendChild(dropdown);
+              
+              searchSpan.style.display = 'none';
+              
+              setTimeout(() => {
+                input.style.width = '150px';
+                input.style.opacity = '1';
+                input.focus();
+              }, 0);
+
+              // Add input event listener for filtering
+              input.addEventListener('input', async function(e) {
+                const searchTerm = e.target.value.toLowerCase();
+                if (searchTerm.length === 0) {
+                  dropdown.style.display = 'none';
+                  return;
+                }
+
+                const response = await fetch('world.geo.json');
+                const data = await response.json();
+                const matchingCountries = data.features.filter(country => 
+                  country.properties.name.toLowerCase().includes(searchTerm)
+                );
+
+                dropdown.innerHTML = '';
+                if (matchingCountries.length > 0) {
+                  matchingCountries.forEach(country => {
+                    const div = document.createElement('div');
+                    div.className = 'dropdown-item';
+                    div.textContent = country.properties.name;
+                    div.style.padding = '8px 12px';
+                    div.style.cursor = 'pointer';
+                    div.style.color = '#fff';
+                    div.style.transition = 'background-color 0.2s';
+                    
+                    div.addEventListener('mouseover', () => {
+                      div.style.backgroundColor = '#333';
+                    });
+                    div.addEventListener('mouseout', () => {
+                      div.style.backgroundColor = 'transparent';
+                    });
+
+                    div.addEventListener('click', () => {
+                      const countryPath = d3.select(`path[data-name="${country.properties.name}"]`);
+                      if (!countryPath.empty()) {
+                        countryPath.dispatch('click');
+                      }
+                      input.value = '';
+                      dropdown.style.display = 'none';
+                      searchSpan.style.display = 'inline';
+                      input.remove();
+                      dropdown.remove();
+                    });
+
+                    dropdown.appendChild(div);
+                  });
+                  dropdown.style.display = 'block';
+                } else {
+                  dropdown.style.display = 'none';
+                }
+              });
+            }
+          });
+
+          // Handle clicks outside the search
+          document.addEventListener('click', function(e) {
+            const searchItem = document.querySelector('.header-item:first-child');
+            const searchSpan = searchItem.querySelector('span');
+            const searchInput = searchItem.querySelector('input');
+            const dropdown = searchItem.querySelector('.search-dropdown');
+            
+            if (searchInput && !searchItem.contains(e.target)) {
+              searchInput.style.width = '0';
+              searchInput.style.opacity = '0';
+              
+              searchSpan.style.display = 'inline';
+              
+              setTimeout(() => {
+                searchInput.remove();
+                if (dropdown) dropdown.remove();
+              }, 300);
+            }
+          });
         });
     </script>
     <script src="config.js"></script>
