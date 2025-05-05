@@ -313,3 +313,32 @@ svg#map {
   margin-bottom: 1.5rem;
   color: #ffffff;
 }
+
+
+#analyzeBtn {
+  display: inline-block;
+  font-family: 'Bebas Neue', sans-serif;    
+  text-transform: uppercase;               
+  font-size: 1.25rem;                    
+  letter-spacing: 1px;                     
+  background-color: transparent;           
+  color: #dffe14;                         
+  border: 2px solid #dffe14;               
+  padding: 0.5em 1.2em;                    
+  cursor: pointer;
+  transition: 
+    background-color 0.2s ease, 
+    color 0.2s ease;
+}
+
+
+#analyzeBtn:hover {
+  background-color: #dffe14;             
+  color: #292929;                         
+}
+
+#analysisResult {
+  color: #ffffff;
+  font-size: 1rem;
+  line-height: 1.4;
+}

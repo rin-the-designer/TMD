@@ -369,6 +369,62 @@ async function openModal(countryName, countryCode) {
           .join("")}
       </div>
     `;
+    const firstArticleUrl = articles[0]?.url || "";
+    document.getElementById("news-content").innerHTML += `
+      <button id="analyzeBtn" data-url="${firstArticleUrl}" style="margin-top:1em;">
+        Analyze First Article Sentiment & Bias
+      </button>
+      <pre id="analysisResult" style="margin-top:.5em; white-space: pre-wrap;"></pre>
+    `;
+    const analyzeBtn = document.getElementById("analyzeBtn");
+    analyzeBtn.addEventListener("click", async () => {
+      const resultBox = document.getElementById("analysisResult");
+      const articleUrl = analyzeBtn.dataset.url;
+      if (!articleUrl) {
+        resultBox.textContent = "No article URL available to analyze.";
+        return;
+      }
+      resultBox.textContent = "Loading full article…";
+      try {
+        // get full text
+        const fullResp = await fetch("http://127.0.0.1:5000/fulltext", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ url: articleUrl }),
+        });
+        if (!fullResp.ok) throw new Error(fullResp.statusText);
+        const { fulltext } = await fullResp.json();
+    
+        //and call sentiment analysis
+        resultBox.textContent = "Analyzing full text…";
+        const analyzeResp = await fetch("http://127.0.0.1:5000/analyze", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ text: fulltext }),
+        });
+        if (!analyzeResp.ok) throw new Error(analyzeResp.statusText);
+        const { analysis } = await analyzeResp.json();
+    
+        
+        let parsed;
+        try {
+          parsed = JSON.parse(analysis);
+          resultBox.innerHTML = `
+            <strong>Sentiment:</strong> ${parsed.sentiment}<br>
+            <strong>Bias Detected:</strong> ${parsed.bias_detected}<br>
+            ${parsed.bias_explanation
+              ? `<strong>Explanation:</strong> ${parsed.bias_explanation}`
+              : ""}
+          `;
+        } catch {
+          
+          resultBox.textContent = analysis;
+        }
+      } catch (err) {
+        console.error(err);
+        resultBox.textContent = "Error: " + err.message;
+      }
+    });
   } catch (error) {
     console.error("Error:", error);
     document.getElementById("news-content").innerHTML = `
